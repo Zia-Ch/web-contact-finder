@@ -1,5 +1,6 @@
 import os
-from flask import Flask, jsonify
+from dotenv import find_dotenv, load_dotenv
+from flask import Flask, jsonify, request
 from flask_limiter import Limiter
 from werkzeug.exceptions import HTTPException
 
@@ -13,22 +14,31 @@ app = Flask(__name__)
 # Enable debug mode during development
 app.debug = True
 
-# Set a secret key for session management
-app.secret_key = os.urandom(24)
+# Load environment variables
+load_dotenv(find_dotenv(".env"))
+
+# Get API key from environment variable
+API_KEY = os.getenv('API_KEY')
+
 
 # Implement rate limiting
 limiter = Limiter(
     app,
-    #key_func=get_remote_address,
-    default_limits=["1000/day"]
+    default_limits=["20000/day"]
 )
 
 
  
-@limiter.limit("10/minute")
+@limiter.limit("30/minute")
 @app.route('/api', methods=['POST'])
 
 def api():
+    api_key = request.headers.get('X-API-KEY')
+    
+    # Validate API key
+    if not api_key or not api_key == API_KEY:
+        return jsonify({'error': 'Invalid API key'}), 401
+    
     return scrape_contact_email()
     
 @app.errorhandler(Exception)
